@@ -9,7 +9,7 @@ Built using **Python**, **Scikit-learn**, **XGBoost**, and **Flask**, with a mod
 ## 📸 Homepage
 
 <p align="center">
-  <img src="screenshots/home.png" alt="FareGate Homepage" width="100%">
+  <img src="screenshots/Home.png" alt="FareGate Homepage" width="100%">
 </p>
 
 ---
