@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FareGate — Flight Fare Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../static/style.css">
+</head>
+<body>
+
+<div class="sky-field" aria-hidden="true"></div>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="wordmark">
+      <span class="wordmark-mark">✈</span>FAREGATE
+    </div>
+    <p class="tagline">Fare intelligence for Indian domestic routes</p>
+  </div>
+  <div class="live-chip">
+    <span class="live-dot"></span>
+    MODEL LIVE
+  </div>
+</header>
+
+<main class="stage">
+
+  <form class="boarding-pass" id="boardingPassForm" method="POST" action="/" autocomplete="off">
+
+    <div class="pass-main">
+
+      <div class="pass-row route-row">
+        <div class="field">
+          <label for="source">FROM</label>
+          <select name="source" id="source" required>
+            <option value="" disabled {{ 'selected' if not request.form.get('source') }}>Select city</option>
+            {% for city in cities %}
+            <option value="{{ city }}" {{ 'selected' if request.form.get('source') == city }}>{{ city }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="route-line" aria-hidden="true">
+          <svg viewBox="0 0 120 24" class="route-svg">
+            <line x1="4" y1="12" x2="116" y2="12" stroke-dasharray="4 6"/>
+          </svg>
+          <span class="route-plane">✈</span>
+        </div>
+
+        <div class="field">
+          <label for="destination">TO</label>
+          <select name="destination" id="destination" required>
+            <option value="" disabled {{ 'selected' if not request.form.get('destination') }}>Select city</option>
+            {% for city in cities %}
+            <option value="{{ city }}" {{ 'selected' if request.form.get('destination') == city }}>{{ city }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="pass-row">
+        <div class="field wide">
+          <label for="airline">CARRIER</label>
+          <select name="airline" id="airline" required>
+            <option value="" disabled {{ 'selected' if not request.form.get('airline') }}>Select airline</option>
+            {% for a in airlines %}
+            <option value="{{ a }}" {{ 'selected' if request.form.get('airline') == a }}>{{ a }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="stops">STOPS</label>
+          <select name="stops" id="stops" required>
+            {% for s in stops %}
+            <option value="{{ s }}" {{ 'selected' if request.form.get('stops') == s|string }}>{{ s }} {{ 'stop' if s == 1 else 'stops' if s > 0 else '(non-stop)' }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="pass-row">
+        <div class="field">
+          <label for="date">DEPART DATE</label>
+          <input type="date" name="date" id="date" value="{{ request.form.get('date', '') }}" required>
+        </div>
+        <div class="field">
+          <label for="dep_time">DEPART TIME</label>
+          <input type="time" name="dep_time" id="dep_time" value="{{ request.form.get('dep_time', '') }}" required>
+        </div>
+        <div class="field">
+          <label for="arr_time">ARRIVE TIME</label>
+          <input type="time" name="arr_time" id="arr_time" value="{{ request.form.get('arr_time', '') }}" required>
+        </div>
+      </div>
+
+      <div class="pass-row">
+        <div class="field wide">
+          <label for="additional_info">FARE CLASS / INFO</label>
+          <select name="additional_info" id="additional_info" required>
+            {% for info in additional_info %}
+            <option value="{{ info }}" {{ 'selected' if request.form.get('additional_info') == info }}>{{ info }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="predict-btn" id="predictBtn">
+        <span class="btn-label">PREDICT FARE</span>
+        <span class="btn-arrow">→</span>
+      </button>
+      {% if error %}
+      <p class="error-msg" role="alert">{{ error }}</p>
+      {% else %}
+      <p class="error-msg" role="alert"></p>
+      {% endif %}
+    </div>
+
+    <div class="perforation" aria-hidden="true"></div>
+
+    <div class="pass-stub">
+      <div class="stub-top">
+        <span class="stub-label">PASSENGER COPY</span>
+        <span class="stub-id" id="ticketNumber">FG–000000</span>
+      </div>
+
+      <div class="stub-route" id="stubRoute">
+        <span id="stubFrom">{{ request.form.get('source', '—') }}</span><span class="stub-route-arrow">✈</span><span id="stubTo">{{ request.form.get('destination', '—') }}</span>
+      </div>
+      <div class="stub-duration" id="stubDuration">
+        {% if duration_hour is not none %}Duration&nbsp;{{ duration_hour }}h {{ duration_minute }}m{% else %}Duration&nbsp;—{% endif %}
+      </div>
+
+      <div class="stamp-area" id="stampArea">
+        {% if prediction is not none %}
+        <div class="fare-stamp">
+          <span class="stamp-eyebrow">PREDICTED FARE</span>
+          <span class="stamp-price">₹{{ "{:,}".format(prediction) }}</span>
+          <span class="stamp-foot">FAREGATE MODEL</span>
+        </div>
+        {% else %}
+        <div class="stamp-placeholder" id="stampPlaceholder">Enter your details<br>and predict a fare</div>
+        {% endif %}
+      </div>
+
+      <div class="barcode" id="barcode" aria-hidden="true"></div>
+    </div>
+
+  </form>
+
+  <section class="board-strip" aria-label="Model details">
+    <div class="flap-group">
+      <span class="flap-label">MODEL</span>
+      <div class="flap-value" id="flapModel">XGBOOST</div>
+    </div>
+    <div class="flap-divider" aria-hidden="true"></div>
+    <div class="flap-group">
+      <span class="flap-label">R² ACCURACY</span>
+      <div class="flap-value" id="flapAccuracy">92.64%</div>
+    </div>
+    <div class="flap-divider" aria-hidden="true"></div>
+    <div class="flap-group">
+      <span class="flap-label">TUNED VIA</span>
+      <div class="flap-value" id="flapTuning">GRIDSEARCHCV</div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="page-footer">
+  <p>Predictions are estimates from a model trained on historical fares — actual prices vary with demand and availability.</p>
+</footer>
+
+<script src="../static/script.js"></script>
+</body>
+</html>
